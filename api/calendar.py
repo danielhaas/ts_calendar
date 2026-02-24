@@ -21,11 +21,12 @@ def _set_cached(team_id, data):
     _cache[team_id] = {"data": data, "ts": time.time()}
 
 
-def _build_feed(team_id):
+def _build_feed(team_id, member_id=None):
     client = TeamSnapClient()
 
-    # 1. Get current user's member_id on this team
-    member_id = client.get_member_id(team_id)
+    # 1. Get member_id — use provided one, or look up current user's
+    if not member_id:
+        member_id = client.get_member_id(team_id)
 
     # 2. Fetch events, availabilities, locations, and opponents
     events = client.get_events(team_id)
@@ -62,12 +63,15 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(b"Missing required query parameter: team_id")
             return
 
-        # Check cache
-        ical_data = _get_cached(team_id)
+        member_id = params.get("member_id", [None])[0]
+
+        # Check cache (keyed by team_id + member_id)
+        cache_key = f"{team_id}:{member_id or 'me'}"
+        ical_data = _get_cached(cache_key)
         if not ical_data:
             try:
-                ical_data = _build_feed(team_id)
-                _set_cached(team_id, ical_data)
+                ical_data = _build_feed(team_id, member_id)
+                _set_cached(cache_key, ical_data)
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "text/plain")
