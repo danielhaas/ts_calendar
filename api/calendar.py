@@ -56,16 +56,6 @@ class handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
 
-        password = os.environ.get("FEED_PASSWORD", "")
-        if password:
-            key = params.get("key", [None])[0]
-            if key != password:
-                self.send_response(403)
-                self.send_header("Content-Type", "text/plain")
-                self.end_headers()
-                self.wfile.write(b"Forbidden: invalid key")
-                return
-
         team_id = params.get("team_id", [None])[0]
         if not team_id:
             self.send_response(400)
