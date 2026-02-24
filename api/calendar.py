@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
 from api._ical_generator import generate_ical
-from api._teamsnap_client import TeamSnapClient
+from api._teamsnap_client import TeamSnapClient, _parse_collection_items, BASE_URL
 
 # In-memory cache for warm serverless instances
 _cache = {}
@@ -29,26 +29,34 @@ def _build_feed(team_id, member_id=None):
     if not member_id:
         member_id = client.get_member_id(team_id)
 
-    # 2. Fetch events, availabilities, locations, and opponents
+    # 2. Fetch team info
+    team_data = client._get(f"{BASE_URL}/teams/{team_id}")
+    team_items = _parse_collection_items(team_data)
+    team_info = team_items[0] if team_items else {}
+    team_name = team_info.get("name", "TeamSnap")
+    team_tz = team_info.get("time_zone_iana_name") or "UTC"
+
+    # 3. Fetch events, availabilities, locations, and opponents
     events = client.get_events(team_id)
     availabilities = client.get_availabilities(team_id, member_id)
     locations_list = client.get_locations(team_id)
     opponents_list = client.get_opponents(team_id)
 
-    # 3. Build lookup maps
+    # 4. Build lookup maps
     avail_by_event = {a["event_id"]: a for a in availabilities}
     locations_by_id = {loc["id"]: loc for loc in locations_list}
     opponents_by_id = {opp["id"]: opp for opp in opponents_list}
 
-    # 4. Filter to Yes (1) or Maybe (2)
+    # 5. Filter to Yes (1) or Maybe (2)
     filtered = []
     for ev in events:
         avail = avail_by_event.get(ev["id"])
         if avail and avail.get("status_code") in (1, 2):
             filtered.append(ev)
 
-    # 5. Generate iCal
-    return generate_ical(filtered, locations_by_id, opponents_by_id)
+    # 6. Generate iCal
+    return generate_ical(filtered, locations_by_id, opponents_by_id,
+                         team_name=team_name, team_tz_name=team_tz)
 
 
 class handler(BaseHTTPRequestHandler):
