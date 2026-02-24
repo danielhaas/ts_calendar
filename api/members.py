@@ -1,4 +1,4 @@
-import json
+import os
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 
@@ -43,7 +43,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </div>
 
 <script>
-var baseUrl = location.origin + "/api/calendar?team_id=TEAM_ID";
+var baseUrl = location.origin + "/api/calendar?team_id=TEAM_ID&key=FEED_KEY";
 function showLink() {
   var mid = document.getElementById("member").value;
   var el = document.getElementById("result");
@@ -70,6 +70,16 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         params = parse_qs(parsed.query)
+
+        password = os.environ.get("FEED_PASSWORD", "")
+        if password:
+            key = params.get("key", [None])[0]
+            if key != password:
+                self.send_response(403)
+                self.send_header("Content-Type", "text/plain")
+                self.end_headers()
+                self.wfile.write(b"Forbidden: invalid key")
+                return
 
         team_id = params.get("team_id", [None])[0]
         if not team_id:
@@ -107,6 +117,7 @@ class handler(BaseHTTPRequestHandler):
             html = HTML_TEMPLATE.replace("TEAM_NAME", team_name)
             html = html.replace("MEMBER_OPTIONS", options)
             html = html.replace("TEAM_ID", str(team_id))
+            html = html.replace("FEED_KEY", password)
 
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
