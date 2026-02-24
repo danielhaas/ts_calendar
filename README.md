@@ -2,6 +2,8 @@
 
 A self-hosted calendar subscription feed that shows only the TeamSnap events you've RSVP'd **Yes** or **Maybe** to. Deploy once for your team and everyone can subscribe to their own personalized feed.
 
+The feed matches TeamSnap's native iCal format — team name in summaries, local timezone, location and arrival time in descriptions.
+
 ## How It Works
 
 A serverless Python function on Vercel fetches your team's events from the TeamSnap API, filters them by each member's RSVP status, and serves a standard `.ics` calendar feed. Any calendar app (Google Calendar, Apple Calendar, Outlook) can subscribe to it.
@@ -47,6 +49,7 @@ vercel env add TEAMSNAP_CLIENT_ID      # paste your Client ID
 vercel env add TEAMSNAP_CLIENT_SECRET   # paste your Client Secret
 vercel env add TEAMSNAP_ACCESS_TOKEN    # paste your Access Token
 vercel env add TEAMSNAP_REFRESH_TOKEN   # paste your Refresh Token
+vercel env add FEED_PASSWORD            # optional: password to protect the members page
 
 vercel --prod   # redeploy with env vars
 ```
@@ -64,19 +67,31 @@ Send your teammates this link (replace `YOUR_TEAM_ID` and `your-app.vercel.app`)
 https://your-app.vercel.app/api/members?team_id=YOUR_TEAM_ID
 ```
 
-They select their name from the dropdown, copy the calendar URL, and add it as a subscription in their calendar app.
+If you set a `FEED_PASSWORD`, teammates will be prompted to enter it before they can see the member list. They select their name from the dropdown, copy the calendar URL, and add it as a subscription in their calendar app.
 
 ## Endpoints
 
 | Endpoint | Description |
 |---|---|
-| `/api/members?team_id=XXXXX` | Interactive page for teammates to get their calendar URL |
+| `/api/members?team_id=XXXXX` | Interactive page for teammates to get their calendar URL (password-protected if `FEED_PASSWORD` is set) |
 | `/api/calendar?team_id=XXXXX` | Calendar feed for the token owner |
 | `/api/calendar?team_id=XXXXX&member_id=YYYYY` | Calendar feed for a specific team member |
+
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `TEAMSNAP_CLIENT_ID` | Yes | From TeamSnap developer portal |
+| `TEAMSNAP_CLIENT_SECRET` | Yes | From TeamSnap developer portal |
+| `TEAMSNAP_ACCESS_TOKEN` | Yes | From `setup_auth.py` |
+| `TEAMSNAP_REFRESH_TOKEN` | Yes | From `setup_auth.py` |
+| `FEED_PASSWORD` | No | Password to protect the members page |
 
 ## Local Development
 
 ```bash
+cp .env.example .env
+# fill in your values in .env
 pip install -r requirements.txt
 python serve_local.py
 # visit http://localhost:3000/api/members?team_id=YOUR_TEAM_ID
