@@ -27,14 +27,16 @@ def _build_feed(team_id):
     # 1. Get current user's member_id on this team
     member_id = client.get_member_id(team_id)
 
-    # 2. Fetch events, availabilities, and locations
+    # 2. Fetch events, availabilities, locations, and opponents
     events = client.get_events(team_id)
     availabilities = client.get_availabilities(team_id, member_id)
     locations_list = client.get_locations(team_id)
+    opponents_list = client.get_opponents(team_id)
 
     # 3. Build lookup maps
     avail_by_event = {a["event_id"]: a for a in availabilities}
     locations_by_id = {loc["id"]: loc for loc in locations_list}
+    opponents_by_id = {opp["id"]: opp for opp in opponents_list}
 
     # 4. Filter to Yes (1) or Maybe (2)
     filtered = []
@@ -44,7 +46,7 @@ def _build_feed(team_id):
             filtered.append(ev)
 
     # 5. Generate iCal
-    return generate_ical(filtered, locations_by_id)
+    return generate_ical(filtered, locations_by_id, opponents_by_id)
 
 
 class handler(BaseHTTPRequestHandler):

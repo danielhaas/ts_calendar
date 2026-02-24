@@ -91,3 +91,9 @@ class TeamSnapClient:
             "team_id": team_id,
         })
         return _parse_collection_items(data)
+
+    def get_opponents(self, team_id):
+        data = self._get(f"{BASE_URL}/opponents/search", params={
+            "team_id": team_id,
+        })
+        return _parse_collection_items(data)
