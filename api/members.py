@@ -26,7 +26,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1>TeamSnap Calendar Feed</h1>
+<h1>TEAM_NAME</h1>
 <p>Select your name to get a calendar subscription URL that shows only events you've RSVP'd Yes or Maybe to.</p>
 
 <select id="member" onchange="showLink()">
@@ -59,6 +59,9 @@ function copyUrl() {
   setTimeout(function(){ document.getElementById("copied").style.display = "none"; }, 2000);
 }
 </script>
+<footer style="margin-top:40px; padding-top:16px; border-top:1px solid #eee; font-size:12px; color:#999;">
+  <a href="https://github.com/danielhaas/ts_calendar" style="color:#999;">Source on GitHub</a>
+</footer>
 </body>
 </html>"""
 
@@ -78,6 +81,12 @@ class handler(BaseHTTPRequestHandler):
 
         try:
             client = TeamSnapClient()
+
+            # Fetch team name
+            team_data = client._get(f"{BASE_URL}/teams/{team_id}")
+            team_items = _parse_collection_items(team_data)
+            team_name = team_items[0].get("name", "TeamSnap") if team_items else "TeamSnap"
+
             data = client._get(f"{BASE_URL}/members/search", params={
                 "team_id": team_id,
             })
@@ -95,7 +104,8 @@ class handler(BaseHTTPRequestHandler):
                 f'<option value="{m["member_id"]}">{m["name"]}</option>'
                 for m in members_list
             )
-            html = HTML_TEMPLATE.replace("MEMBER_OPTIONS", options)
+            html = HTML_TEMPLATE.replace("TEAM_NAME", team_name)
+            html = html.replace("MEMBER_OPTIONS", options)
             html = html.replace("TEAM_ID", str(team_id))
 
             self.send_response(200)
